@@ -12,6 +12,68 @@ Data refreshes every **30 minutes** via Vercel serverless caching.
 
 ---
 
+## 🗺 Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  BROWSER                                                        │
+│                                                                 │
+│   ┌──────────────────────────────────────────────────────┐     │
+│   │  User visits warwatch.vercel.app                     │     │
+│   │  React + SWR  ·  auto-polls /api/* every 30 min      │     │
+│   │  @vercel/analytics  ·  visitor tracking              │     │
+│   └──────────────────────┬───────────────────────────────┘     │
+└──────────────────────────┼──────────────────────────────────────┘
+                    HTTPS request
+┌──────────────────────────▼──────────────────────────────────────┐
+│  VERCEL CDN / EDGE                                              │
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────┐      │
+│   │  Edge cache  ·  s-maxage=1800                        │      │
+│   │  Serves cached response instantly if < 30 min old   │      │
+│   └─────────────────────┬───────────────────────────────┘      │
+└─────────────────────────┼───────────────────────────────────────┘
+              cache miss → fetch fresh data
+┌─────────────────────────▼───────────────────────────────────────┐
+│  SERVERLESS FUNCTIONS  (pages/api/)                             │
+│                                                                 │
+│   ┌──────────┐  ┌─────────────┐  ┌──────────┐  ┌──────────┐   │
+│   │ news.js  │  │casualties.js│  │energy.js │  │ gdelt.js │   │
+│   │ 3-query  │  │ ACLED events│  │5 commodit│  │media tone│   │
+│   └────┬─────┘  └──────┬──────┘  └────┬─────┘  └────┬─────┘   │
+│        └───────────────┴───────────────┴─────────────┘         │
+│                              │                                  │
+│   ┌───────────────────────────▼───────────────────────────┐    │
+│   │  lib/cache.js — in-memory TTL cache (30 min)          │    │
+│   │  prevents duplicate API calls within same instance    │    │
+│   └───────────────────────────┬───────────────────────────┘    │
+└───────────────────────────────┼─────────────────────────────────┘
+        only on cache miss (max 1 external call per 30 min)
+┌───────────────────────────────▼─────────────────────────────────┐
+│  EXTERNAL APIs                                                  │
+│                                                                 │
+│   ┌──────────────┐  ┌──────────┐  ┌───────────────┐  ┌──────┐  │
+│   │ NewsData.io  │  │  ACLED   │  │ OilPriceAPI   │  │GDELT │  │
+│   │ 200 req/day  │  │ research │  │ free, no card │  │ open │  │
+│   └──────────────┘  └──────────┘  └───────────────┘  └──────┘  │
+└─────────────────────────────────────────────────────────────────┘
+
+  API keys → stored as Vercel Environment Variables (never in GitHub)
+
+┌─────────────────────────────────────────────────────────────────┐
+│  CI/CD                                                          │
+│                                                                 │
+│   GitHub repo  ──push to main──▶  Vercel build  ──~90s──▶ Live │
+│                                   (other branches ignored)      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+> **Two cache layers** keep external API usage minimal: Vercel's edge CDN serves
+> repeat visitors instantly, and `lib/cache.js` ensures the same serverless instance
+> never double-calls an API within the same 30-minute window.
+
+---
+
 ## 🚀 QUICK START — GitHub + Vercel Deployment
 
 ### STEP 1: Create a GitHub Account & Repository
@@ -219,5 +281,3 @@ This dashboard is for **informational and research purposes only**. Data accurac
 ---
 
 *Built with Next.js · Deployed on Vercel · Data from NewsData.io, ACLED, GDELT Project, Alpha Vantage*
-
-Finish
