@@ -219,3 +219,5 @@ This dashboard is for **informational and research purposes only**. Data accurac
 ---
 
 *Built with Next.js · Deployed on Vercel · Data from NewsData.io, ACLED, GDELT Project, Alpha Vantage*
+
+Finish
