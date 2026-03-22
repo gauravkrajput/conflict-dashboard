@@ -3,12 +3,6 @@
   "buildCommand": "next build",
   "devCommand": "next dev",
   "installCommand": "npm install",
-  "env": {
-    "NEWSDATA_API_KEY": "@newsdata_api_key",
-    "ACLED_API_KEY": "@acled_api_key",
-    "ACLED_EMAIL": "@acled_email",
-    "ALPHA_VANTAGE_API_KEY": "@alpha_vantage_api_key"
-  },
   "headers": [
     {
       "source": "/api/(.*)",
